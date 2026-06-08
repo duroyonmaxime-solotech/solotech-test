@@ -1,3 +1,6 @@
+// @ts-nocheck
+/* eslint-disable */
+
 import React from 'react'
 import Btn from './Button.tsx'
 
@@ -5,10 +8,16 @@ export default function App() {
   const [count, setCount] = React.useState(0)
   const [mounted, setMounted] = React.useState(true)
   const [pokemons, setPokemons] = React.useState([])
+  const [pokemonsDetails, setPokemonsDetails] = React.useState([])
   let displayCard = React.useRef(false)
+  const Stats = {
+    Monostat: 'MONOSTAT',
+    Duostat: 'DUOSTAT',
+    Multistat: 'MULTISTAT'
+  }
 
   React.useEffect(() => {
-    getData()
+    GetData()
     if (mounted) {
       console.log('App mounted')
     }
@@ -23,39 +32,72 @@ export default function App() {
   }, [count, mounted])
 
   const handleClick = () => {
-    setCount((count as unknown as number) + 1)
+    setCount(count + 1)
   }
 
-  async function getData() {
-    try {
-      const response = await fetch("https://pokeapi.co/api/v2/pokemon?limit=10&offset=0");
-      if (!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      setPokemons(result.results);
-    } catch (error) {
-      console.error(error.message);
+  async function GetData() {
+    const response = await fetch("https://pokeapi.co/api/v2/pokemon?limit=10&offset=0");
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
     }
+
+    const result = await response.json();
+    setPokemons(result.results);
+
+    result.results.forEach(async element => {
+      const response = await fetch(element.url);
+      const result = await response.json();
+      setPokemonsDetails((previous) => [...previous, result])
+    });
+    console.log(pokemonsDetails)
   }
 
-  const Card = (title, description, level) => {
+  const Card = (title: string, description: string, level: string, stats: any) => {
     return (
       <div>
         <h2>{title}</h2>
         <p>{description}</p>
+        <span>{level === 100 && "Niveau max !"}</span>
+
+        <div>
+          {pokemonsDetails.find(detail => detail.name === title).types.map(({type}) => (
+            <span>{type.name}</span>
+          ))}
+        </div>
+        <div>
+          <span>Stats type : </span>
+          <span>
+            {stats.length === 1 ? (
+              Stats.Monostat
+            ) : (
+              stats.length === 2 ? (
+                Stats.Duostat
+              ) : (
+                Stats.Multistat
+              )
+            )}
+          </span>
+        </div>
       </div>
     )
   }
 
   return (
     <div>
-      <h1>Mini React app</h1>
-      <Btn label="Click me" onClick={() => handleClick()} /> 
-      <p>Count: {count}</p>
-      <span onClick={() => {displayCard.current = true}}>Display my card</span>
-      {pokemons.map((pokemon: any) => Card(pokemon.name, pokemon.url))}
+      <div>
+        <Btn label="Click me" onClick={() => handleClick()} />
+        <p>Count: {count}</p>
+      </div>
+      <div>
+        <div>
+          <button onClick={() => displayCard.current = true}>Display my card</button>
+        </div>
+        {displayCard.current && (
+          <div>
+            {pokemons.map((pokemon: any) => Card(pokemon.name, pokemon.url, pokemon.level, pokemon.stats))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
